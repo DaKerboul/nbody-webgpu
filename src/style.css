@@ -290,6 +290,11 @@ button.is-active {
   padding: 8vw;
   z-index: 20;
 }
+/* the #fallback id selector outweighs the UA [hidden] rule, so spell out
+   the hidden state explicitly — otherwise it shows over a working canvas */
+#fallback[hidden] {
+  display: none;
+}
 #fallback h2 {
   font-family: "Instrument Serif", Georgia, serif;
   font-weight: 400;
