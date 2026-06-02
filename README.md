@@ -1,89 +1,90 @@
 # nbody-webgpu
 
-A gravitational N-body simulation that runs entirely on your GPU, in the browser.
-Every body pulls on every other one — a brute-force O(N²) sum — recomputed each
-frame as a WebGPU compute shader and drawn as a few tens of thousands of glowing
-points. No server, no precomputed animation: open the page and the GPU does the
+A gravitational N-body simulation that runs on the GPU, in the browser. Every
+body pulls on every other one (a brute-force O(N²) sum), recomputed every frame
+in a WebGPU compute shader and drawn as a few tens of thousands of points.
+Nothing is precomputed and there's no server. Open the page and the GPU does the
 physics live.
 
-[Live demo →](https://kerboul.me) · works in Chrome, Edge, and Safari 18+.
+Live at [kerboul.me](https://kerboul.me). Works in Chrome, Edge, and Safari 18+.
 
-## The parts worth reading
+## How it works
 
-**Tiled force summation.** The naive version has every body loop over all the
-others straight out of global memory — correct, but bandwidth-bound. Instead each
-workgroup cooperatively stages a block ("tile") of bodies into on-chip shared
-memory, barriers, and runs the inner loop against that. It's the classic GPU-Gems
-N-body structure and it's where the throughput comes from. See
+The force sum is tiled. A naive kernel has every body loop over all the others
+straight out of global memory, which works but is bandwidth-bound. Instead each
+workgroup loads a block of bodies into shared memory, syncs, and runs its inner
+loop against that on-chip copy. It's the standard GPU-Gems N-body layout, and
+where most of the throughput comes from. The kernel is in
 [`src/shaders/nbody.wgsl`](src/shaders/nbody.wgsl).
 
-**Symplectic integration.** The time stepper is leapfrog (kick-drift) with the
-velocity staggered half a step behind position. The point isn't accuracy per se —
-it's that a symplectic integrator doesn't secularly gain or lose energy, so the
-disk holds together over millions of steps instead of slowly unwinding or
-collapsing the way plain explicit Euler would. The first step does a half-kick to
-set up the stagger.
+The time stepper is leapfrog (kick-drift), with velocity kept half a step behind
+position. Leapfrog is symplectic, so the energy wobbles but doesn't drift off,
+and the disk holds its shape over millions of steps instead of slowly unwinding
+or collapsing the way plain Euler does. The first step does a half kick to set up
+the offset.
 
-**Plummer softening.** A small ε² added to every squared distance keeps the
-1/r² force finite when two bodies get close, which both stabilises the integration
-and conveniently zeroes out the self-interaction term for free.
+Close encounters use Plummer softening: a small ε² added to each squared distance
+keeps the 1/r² force finite when two bodies nearly overlap. It also zeroes out a
+body's pull on itself, so the self term needs no special case.
 
-**Ping-pong buffers.** Positions live in two storage buffers; each step reads one
-and writes the other, then they swap. WebGPU orders successive dispatches within a
-pass, so the read-after-write is safe without manual barriers. Velocities are a
-single buffer since each invocation only ever touches its own.
+Positions live in two buffers. Each step reads one and writes the other, then
+they swap. WebGPU orders dispatches within a pass, so the read-after-write is safe
+without manual barriers. Velocities sit in a single buffer, since each thread
+only ever touches its own.
 
-**Rendering.** WebGPU point-list topology only gives 1px dots, so each body is an
-instanced two-triangle billboard expanded to a constant pixel size in clip space,
-with a soft radial falloff and additive blending. Colour is keyed to speed, so the
-fast inner disk runs hot and the slow rim stays ember-dark.
+WebGPU's point topology only draws 1px dots, so each body is an instanced quad
+blown up to a fixed pixel size, with a soft radial falloff and additive blending.
+Colour is keyed to speed, so the fast inner disk runs hot and the slow rim stays
+dark.
 
-The initial conditions are a rotating disk around a heavy central mass, with orbital
-velocities set from the enclosed mass so it starts roughly in balance. The seed is
-fixed, so the same galaxy comes back every reload.
+The initial state is a rotating disk around a heavy central mass, with orbital
+speeds set from the enclosed mass so it starts roughly balanced. The seed is
+fixed, so the same galaxy comes back on every reload.
 
-## Running it
+## Running
 
 ```bash
 npm install
 npm run dev      # http://localhost:5173
-npm run build    # type-check + bundle into dist/
+npm run build    # type-check, then bundle into dist/
 ```
 
-No runtime dependencies — just Vite and the TypeScript toolchain at build time.
+No runtime dependencies. Just Vite and TypeScript at build time.
 
 ## Deploying to GitHub Pages
 
-`.github/workflows/deploy.yml` builds on every push to `main` and publishes `dist/`.
-Once: in the repo settings, set **Pages → Source → GitHub Actions**. The Vite
-`base` is relative, so it works from a project page (`user.github.io/nbody-webgpu/`)
-or a custom domain at the root without changes. For a custom domain, drop a `CNAME`
-file in `public/` and point the DNS record.
+`.github/workflows/deploy.yml` builds on every push to `main` and publishes
+`dist/`. The only manual step is once, in the repo settings: set Pages → Source →
+GitHub Actions. The Vite `base` is relative, so it works from a project page or a
+custom domain without any changes. For a custom domain, drop a `CNAME` file in
+`public/` and point the DNS at it.
 
-## Tuning
+## Parameters
 
-The panel is live. Worth a try:
+The panel updates live.
 
-- **Bodies** — the cost is N², so 65 536 is 16× the work of 16 384. Watch the
-  pairwise/s readout react.
-- **Gravity / time step** — turn either up far enough and you'll watch the
-  integrator destabilise. Softening buys some of that back.
-- **Substeps** — more physics per rendered frame; the galaxy evolves faster
-  without the visual frame rate dropping.
+Bodies: the cost is N², so 65 536 bodies is 16 times the work of 16 384. The
+pairwise/s readout reacts right away.
+
+Gravity and time step: push either one far enough and the integrator comes apart.
+More softening buys some of that back.
+
+Substeps: more physics per rendered frame, so the galaxy evolves faster without
+the frame rate dropping.
 
 ## Why WebGPU and not WebGL
 
-The simulation is a compute problem, not a rendering one. WebGL can fake compute
-through render-to-texture gymnastics; WebGPU just has compute shaders and shared
-memory, which is what this actually needs. The trade-off is reach — WebGPU is solid
-on Chromium and recent Safari but not yet everywhere — so the page degrades to an
-honest "WebGPU required" notice rather than a broken canvas.
+This is a compute problem, not a rendering one. WebGL can fake compute with
+render-to-texture tricks, but WebGPU just has compute shaders and shared memory,
+which is what the simulation actually needs. The trade-off is reach: WebGPU is
+solid on Chromium and recent Safari but isn't everywhere yet, so where it's
+missing the page shows a "WebGPU required" notice instead of a dead canvas.
 
-## Possible next steps
+## Ideas for later
 
-- Barnes-Hut or an FMM to break the O(N²) wall and push into the millions.
-- A proper colour map and HDR bloom pass.
-- Collision/merger seeding — drop two disks in and let them interact.
+- Barnes-Hut or an FMM to break the O(N²) ceiling and reach into the millions.
+- A proper colour map and an HDR bloom pass.
+- Seed two disks and let them collide.
 
 ---
 
