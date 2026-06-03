@@ -6,7 +6,7 @@ in a WebGPU compute shader and drawn as a few tens of thousands of points.
 Nothing is precomputed and there's no server. Open the page and the GPU does the
 physics live.
 
-Live at [kerboul.me](https://kerboul.me). Works in Chrome, Edge, and Safari 18+.
+Live at [dakerboul.github.io/nbody-webgpu](https://dakerboul.github.io/nbody-webgpu/). Works in Chrome, Edge, and Safari 18+.
 
 ## How it works
 
