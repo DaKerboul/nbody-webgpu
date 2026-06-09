@@ -23,7 +23,9 @@ async function boot(): Promise<void> {
   }
 
   const device = await adapter.requestDevice();
+  let deviceAlive = true;
   device.lost.then((info) => {
+    deviceAlive = false;
     if (info.reason !== "destroyed") {
       showFallback("The GPU device was lost. A reload normally brings it back.");
     }
@@ -65,6 +67,8 @@ async function boot(): Promise<void> {
   let hudAt = 0;
 
   const frame = (now: number): void => {
+    if (!deviceAlive) return;
+
     const interval = now - last;
     last = now;
     const dt = Math.min(interval / 1000, 0.05);
