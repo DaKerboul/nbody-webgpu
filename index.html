@@ -60,8 +60,8 @@
       </div>
       <div class="panel-body">
         <div class="field">
-          <span class="label">Bodies</span>
-          <select id="ctrl-bodies">
+          <span class="label" id="label-bodies">Bodies</span>
+          <select id="ctrl-bodies" aria-labelledby="label-bodies">
             <option value="4096">4 096</option>
             <option value="8192">8 192</option>
             <option value="16384" selected>16 384</option>
@@ -71,33 +71,33 @@
         </div>
 
         <div class="row">
-          <span class="label">Gravity G</span>
+          <span class="label" id="label-g">Gravity G</span>
           <span class="readout" id="val-g"></span>
-          <input id="ctrl-g" type="range" min="0.2" max="3" step="0.05" value="1" />
+          <input id="ctrl-g" type="range" min="0.2" max="3" step="0.05" value="1" aria-labelledby="label-g val-g" />
         </div>
 
         <div class="row">
-          <span class="label">Softening</span>
+          <span class="label" id="label-soft">Softening</span>
           <span class="readout" id="val-soft"></span>
-          <input id="ctrl-soft" type="range" min="0.03" max="0.4" step="0.005" value="0.12" />
+          <input id="ctrl-soft" type="range" min="0.03" max="0.4" step="0.005" value="0.12" aria-labelledby="label-soft val-soft" />
         </div>
 
         <div class="row">
-          <span class="label">Time step</span>
+          <span class="label" id="label-dt">Time step</span>
           <span class="readout" id="val-dt"></span>
-          <input id="ctrl-dt" type="range" min="0.002" max="0.03" step="0.001" value="0.01" />
+          <input id="ctrl-dt" type="range" min="0.002" max="0.03" step="0.001" value="0.01" aria-labelledby="label-dt val-dt" />
         </div>
 
         <div class="row">
-          <span class="label">Substeps</span>
+          <span class="label" id="label-sub">Substeps</span>
           <span class="readout" id="val-sub"></span>
-          <input id="ctrl-sub" type="range" min="1" max="4" step="1" value="1" />
+          <input id="ctrl-sub" type="range" min="1" max="4" step="1" value="1" aria-labelledby="label-sub val-sub" />
         </div>
 
         <div class="row">
-          <span class="label">Point size</span>
+          <span class="label" id="label-size">Point size</span>
           <span class="readout" id="val-size"></span>
-          <input id="ctrl-size" type="range" min="1" max="6" step="0.25" value="2.5" />
+          <input id="ctrl-size" type="range" min="1" max="6" step="0.25" value="2.5" aria-labelledby="label-size val-size" />
         </div>
 
         <div class="buttons">
